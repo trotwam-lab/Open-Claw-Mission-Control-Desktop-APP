@@ -1,0 +1,107 @@
+:root {
+  color-scheme: dark;
+  --bg: #05070f;
+  --bg-surface: #0b1424;
+  --bg-elevated: rgba(19, 30, 53, 0.84);
+  --bg-input: #0e1728;
+  --text: #e3ecff;
+  --text-secondary: #8fa4c5;
+  --text-muted: #5d7099;
+  --border: #2b3d65;
+  --border-subtle: #1e2d4d;
+  --accent: #4cc4ff;
+  --accent-dim: rgba(76, 196, 255, 0.15);
+  --good: #42df9f;
+  --good-dim: rgba(66, 223, 159, 0.15);
+  --warn: #ffd36e;
+  --warn-dim: rgba(255, 211, 110, 0.15);
+  --bad: #ff6f80;
+  --bad-dim: rgba(255, 111, 128, 0.15);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--text);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+}
+
+button {
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.85rem;
+  color: var(--text);
+  background: linear-gradient(160deg, #2a4f84, #1e3a5f);
+  transition: filter 0.12s, border-color 0.12s;
+}
+button:hover { filter: brightness(1.15); }
+button:active { filter: brightness(0.95); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+button.danger {
+  background: linear-gradient(160deg, #8f2c38, #6f2530);
+  border-color: rgba(255, 111, 128, 0.3);
+}
+button.success {
+  background: linear-gradient(160deg, #1a6b47, #155a3a);
+  border-color: rgba(66, 223, 159, 0.3);
+}
+button.secondary {
+  background: linear-gradient(160deg, #394963, #2a3649);
+}
+button.ghost {
+  background: transparent;
+  border-color: transparent;
+}
+button.ghost:hover {
+  background: var(--accent-dim);
+  border-color: var(--border);
+}

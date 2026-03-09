@@ -1,181 +1,144 @@
-# Open Claw Mission Control Desktop App
+# OpenClaw Mission Control Desktop App
 
-A local-first desktop-style mission control interface for OpenClaw operations.
+A native desktop application for managing your OpenClaw agents, sessions, approvals, and more — all from one cockpit. Connects to your OpenClaw Gateway via WebSocket for real-time control.
 
-## What this prototype includes
+## Features
 
-- **Sleek tabbed UX** to separate workflows and reduce dashboard clutter.
-- **Hero metrics** for total agents, active missions, pending approvals, and token throughput.
-- **Agent Status Board** for current, completed, and pending agents/tasks.
-- **2D Agent Landscape** canvas view mapping agents by status and token footprint.
-- **Model Token Usage** panel with per-agent model + token counts.
-- **Mission Timeline** for quick chronological mission context.
-- **Mission Approval Queue** with instant approve/reject actions.
-- **Project Runtime Controls** for pause/resume/**emergency stop** in real time.
-- **Secure Vault** for API keys/passwords/SSH secrets (WebCrypto AES-GCM + PBKDF2).
-- **Agent Memory Index** with live search.
-- **OpenClaw Agent Updater** flow and an action **Audit Trail**.
+- **Dashboard** — Live overview of agents, gateway health, token usage, and mission timeline
+- **Sessions** — Track agent sessions from start to finish with metadata, export, and controls
+- **Chat** — Converse with your agents directly with streaming responses and model selection
+- **Approvals** — Human-in-the-loop gating for destructive actions (`exec.approval.requested`)
+- **Terminal** — Embedded terminal (xterm.js) for direct command-line access
+- **Channels** — Manage agent connections to Telegram, Discord, Slack, WhatsApp, Signal, etc.
+- **Cron Jobs** — Schedule and manage recurring tasks for your agents
+- **Secure Vault** — AES-GCM encrypted credential storage with PBKDF2 key derivation
+- **Audit Trail** — Complete action history from gateway events, approvals, and controls
+- **Settings** — Gateway connection config, auto-connect, and app preferences
 
----
+## Architecture
 
-## Beginner-friendly notes: what was added and why
-
-If you are new to shipping apps, here is what was done in plain language:
-
-1. **The app itself was built as static web files** (`index.html`, `styles.css`, `app.js`).
-   - This means there is no backend server required for the prototype.
-   - You can run it locally with a tiny web server command.
-
-2. **A local installer script was added** (`scripts/install_local.sh`).
-   - This copies app files into your user directory.
-   - It creates a launcher command called `openclaw-mission-control`.
-   - Goal: make running the app easier for non-technical users.
-
-3. **A release packaging script was added** (`scripts/build_release.sh`).
-   - This creates a versioned zip file in `dist/`.
-   - It also creates a SHA-256 checksum file so users can verify file integrity.
-   - Goal: make distribution repeatable and safer.
-
-4. **A version file was added** (`VERSION`).
-   - This keeps release naming consistent (`open-claw-mission-control-<version>.zip`).
-   - Goal: avoid confusion about what build people are installing.
-
-5. **A GitHub Actions release workflow was added** (`.github/workflows/release.yml`).
-   - On tag push (like `v0.1.0`) or manual run:
-     - checks JS syntax
-     - builds release zip/checksum
-     - uploads artifacts
-     - publishes a GitHub release on tag builds
-   - Goal: one-click / one-tag shipping without manual repetition.
-
----
-
-## Install (Local)
-
-### Option A: quick run (no install)
-
-```bash
-python3 -m http.server 4173
+```
+┌─────────────────────────────────────────────────┐
+│  Electron Main Process                          │
+│  ├── Gateway WebSocket Service (ws://18789)     │
+│  ├── IPC Bridge (contextBridge)                 │
+│  └── Shell/PTY for Terminal                     │
+├─────────────────────────────────────────────────┤
+│  Electron Renderer (React + Vite)               │
+│  ├── Dashboard, Sessions, Chat, Approvals       │
+│  ├── Terminal (xterm.js), Channels, Cron        │
+│  ├── Vault, Audit, Settings                     │
+│  └── Gateway Client (IPC or direct WebSocket)   │
+└─────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────┐
+│  OpenClaw Gateway (ws://localhost:18789)         │
+│  Protocol v3 · JSON frames · 70+ RPC methods    │
+└─────────────────────────────────────────────────┘
 ```
 
-Open:
+## Tech Stack
 
-```text
-http://127.0.0.1:4173
-```
+- **Electron** — Native desktop shell (macOS, Windows, Linux)
+- **React 18** — UI framework
+- **Vite** — Build tool with HMR
+- **TypeScript** — Type safety throughout
+- **xterm.js** — Embedded terminal
+- **electron-builder** — Cross-platform packaging (.dmg, .exe, .AppImage)
+- **WebSocket** — Real-time Gateway communication
 
-### Option B: user-local install
+## Quick Start
 
-Use the install script to copy the app into `~/.local/share/open-claw-mission-control` and create a launcher in `~/.local/bin`:
+### Prerequisites
 
-```bash
-./scripts/install_local.sh
-```
+- [Node.js](https://nodejs.org/) 18+
+- [OpenClaw](https://github.com/openclaw/openclaw) running with Gateway enabled
 
-Then run:
-
-```bash
-openclaw-mission-control
-```
-
-> If `~/.local/bin` is not on your `PATH`, add this line to your shell profile:
->
-> `export PATH="$HOME/.local/bin:$PATH"`
-
----
-
-## Prepare for Shipping (Release)
-
-### 1) Set the version
-
-Edit `VERSION` (example: `0.1.0`).
-
-### 2) Build release artifact locally
+### Development
 
 ```bash
-./scripts/build_release.sh
+# Install dependencies
+npm install
+
+# Start dev server + Electron
+npm run electron:dev
+
+# Or just the web UI (browser mode, no Electron)
+npm run dev
+```
+
+### Build
+
+```bash
+# Build for production
+npm run build
+
+# Build renderer only (for testing)
+npm run build:renderer
+```
+
+### Gateway Connection
+
+The app connects to your OpenClaw Gateway at `ws://localhost:18789` by default. Configure this in **Settings** or set the environment variable:
+
+```bash
+export OPENCLAW_GATEWAY_TOKEN=your-token-here
+```
+
+## Project Structure
+
+```
+src/
+├── main/               # Electron main process
+│   ├── main.ts         # App lifecycle, IPC handlers, window management
+│   └── gateway.ts      # WebSocket client for OpenClaw Gateway
+├── preload/
+│   └── preload.ts      # Context bridge (IPC → renderer API)
+└── renderer/src/
+    ├── App.tsx          # Router and page layout
+    ├── main.tsx         # React entry point
+    ├── components/      # Reusable UI components
+    │   └── common/      # Card, Layout, StatusBadge, MetricCard, PageHeader
+    ├── hooks/
+    │   └── useGateway.ts  # React hooks for gateway status, RPC, events
+    ├── pages/           # Route pages
+    │   ├── Dashboard.tsx
+    │   ├── Sessions.tsx
+    │   ├── Chat.tsx
+    │   ├── Approvals.tsx
+    │   ├── Terminal.tsx
+    │   ├── Channels.tsx
+    │   ├── CronJobs.tsx
+    │   ├── Vault.tsx
+    │   ├── Audit.tsx
+    │   └── Settings.tsx
+    ├── services/
+    │   └── gateway.ts   # Renderer-side gateway client
+    └── styles/
+        └── global.css   # Design tokens and base styles
+```
+
+## Packaging
+
+Cross-platform installers are built with electron-builder:
+
+```bash
+npm run build
 ```
 
 Outputs:
+- **macOS**: `.dmg` and `.zip` in `release/`
+- **Windows**: `.exe` (NSIS installer) and `.zip` in `release/`
+- **Linux**: `.AppImage` and `.deb` in `release/`
 
-- `dist/open-claw-mission-control-<version>.zip`
-- `dist/open-claw-mission-control-<version>.sha256`
+## Legacy
 
-### 3) Verify checksum
+The original static prototype files are preserved in the `legacy/` directory for reference:
+- `legacy/app.js` — Original vanilla JS
+- `legacy/styles.css` — Original CSS theme
+- `legacy/index-legacy.html` — Original HTML
 
-Linux:
+## License
 
-```bash
-sha256sum -c dist/open-claw-mission-control-<version>.sha256
-```
-
-macOS:
-
-```bash
-shasum -a 256 dist/open-claw-mission-control-<version>.zip
-```
-
-### 4) Ship manually
-
-Attach the zip + checksum to your release page, changelog, or deployment target.
-
----
-
-## Automated shipping with GitHub Actions
-
-The workflow file is at:
-
-- `.github/workflows/release.yml`
-
-### Automatic release via git tag
-
-1. Make sure `VERSION` matches the tag version (example `0.1.1`).
-2. Commit changes.
-3. Create and push tag:
-
-```bash
-git tag v0.1.1
-git push origin v0.1.1
-```
-
-What happens automatically:
-
-- Workflow runs `node --check app.js`
-- Builds zip/checksum via `./scripts/build_release.sh`
-- Uploads artifacts to the workflow run
-- Creates/updates GitHub Release with attached files
-
-### Manual run (no tag)
-
-- In GitHub, go to **Actions → Build and Publish Release Artifact → Run workflow**.
-- It will build and upload artifacts, but only publish a GitHub Release when running from a `v*` tag.
-
----
-
-## Recommended shipping checklist
-
-- [ ] Bump `VERSION` and update release notes/changelog.
-- [ ] Run static check: `node --check app.js`.
-- [ ] Smoke test key flows:
-  - [ ] tab navigation
-  - [ ] approve/reject
-  - [ ] pause/resume/emergency stop
-  - [ ] vault store/reveal
-  - [ ] memory search
-  - [ ] updater + audit logging
-- [ ] Build artifact: `./scripts/build_release.sh`.
-- [ ] Validate checksum.
-- [ ] Publish zip + checksum.
-- [ ] (Optional) Create git tag to auto-publish release via GitHub Actions.
-
----
-
-## Files
-
-- `index.html` – tabbed layout and feature sections.
-- `styles.css` – visual theme and responsive components.
-- `app.js` – tabs, metrics, 2D map, approvals, controls, vault, memory, updater, audit.
-- `VERSION` – release version used by packaging.
-- `scripts/install_local.sh` – local installer + launcher creator.
-- `scripts/build_release.sh` – release zip and checksum builder.
-- `.github/workflows/release.yml` – CI workflow for build/upload/release on tag.
+MIT
