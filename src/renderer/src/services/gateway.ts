@@ -3,6 +3,12 @@
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
 
+export interface GatewayEvent {
+  type: string
+  event?: string
+  data?: unknown
+}
+
 type EventCallback = (event: GatewayEvent) => void
 type StatusCallback = (status: ConnectionStatus) => void
 
@@ -36,7 +42,15 @@ class GatewayClient {
       return result
     }
 
-    // Direct WebSocket fallback for browser dev
+    // A browser WebSocket can only authenticate by putting the token in the
+    // URL, where it may be retained by logs and browser history. Authenticated
+    // connections therefore require the Electron main-process bridge.
+    if (token) {
+      this.setStatus('error')
+      return false
+    }
+
+    // Direct WebSocket fallback for unauthenticated browser development.
     return this.connectDirect(url, token)
   }
 
@@ -44,7 +58,6 @@ class GatewayClient {
     return new Promise((resolve) => {
       try {
         const wsUrl = new URL(url)
-        if (token) wsUrl.searchParams.set('token', token)
         wsUrl.searchParams.set('v', '3')
         wsUrl.searchParams.set('role', 'operator')
         this.directWs = new WebSocket(wsUrl.toString())

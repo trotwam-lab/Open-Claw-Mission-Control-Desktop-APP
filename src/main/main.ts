@@ -20,7 +20,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     }
   })
 
@@ -32,7 +32,8 @@ function createWindow() {
   }
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    const protocol = new URL(url).protocol
+    if (protocol === 'https:' || protocol === 'mailto:') shell.openExternal(url)
     return { action: 'deny' }
   })
 
@@ -66,17 +67,6 @@ function setupIPC() {
 
   ipcMain.handle('gateway:getStatus', () => {
     return gateway?.getStatus() ?? 'disconnected'
-  })
-
-  // Shell execution for embedded terminal
-  ipcMain.handle('shell:spawn', async (_event, command: string) => {
-    const { exec } = await import('child_process')
-    return new Promise((resolve, reject) => {
-      exec(command, { timeout: 30000 }, (error, stdout, stderr) => {
-        if (error) reject(error.message)
-        else resolve({ stdout, stderr })
-      })
-    })
   })
 
   // PTY for terminal - will be set up when xterm connects
