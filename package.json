@@ -14,27 +14,27 @@
   "author": "OpenClaw Contributors",
   "license": "MIT",
   "dependencies": {
+    "electron-store": "^11.0.2",
+    "lucide-react": "^0.460.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.28.0",
+    "react-router-dom": "^7.18.4",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
-    "xterm-addon-web-links": "^0.9.0",
-    "electron-store": "^11.0.2",
-    "lucide-react": "^0.460.0"
+    "xterm-addon-web-links": "^0.9.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.6.3",
-    "vite": "^5.4.11",
-    "electron": "^33.2.0",
-    "electron-builder": "^25.1.8",
+    "@vitejs/plugin-react": "^6.1.2",
     "concurrently": "^9.1.0",
-    "wait-on": "^8.0.1",
-    "vite-plugin-electron": "^0.28.8",
-    "vite-plugin-electron-renderer": "^0.14.6"
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "typescript": "^5.6.3",
+    "vite": "^8.3.4",
+    "vite-plugin-electron": "^1.1.2",
+    "vite-plugin-electron-renderer": "^1.0.0",
+    "wait-on": "^8.0.1"
   },
   "build": {
     "appId": "com.openclaw.mission-control",
@@ -47,15 +47,24 @@
       "dist-electron/**/*"
     ],
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "build/icon.icns"
     },
     "win": {
-      "target": ["nsis", "zip"],
+      "target": [
+        "nsis",
+        "zip"
+      ],
       "icon": "build/icon.ico"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "build/icon.png",
       "category": "Development"
     }
