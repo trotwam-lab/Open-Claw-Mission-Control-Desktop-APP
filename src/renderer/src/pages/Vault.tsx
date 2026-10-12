@@ -15,7 +15,7 @@ async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKe
   const enc = new TextEncoder()
   const material = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey'])
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 120000, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: salt.buffer.slice(salt.byteOffset, salt.byteOffset + salt.byteLength) as ArrayBuffer, iterations: 120000, hash: 'SHA-256' },
     material,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -23,12 +23,13 @@ async function deriveKey(passphrase: string, salt: Uint8Array): Promise<CryptoKe
   )
 }
 
-function b64FromBuffer(buf: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+function b64FromBuffer(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf)
+  return btoa(String.fromCharCode(...bytes))
 }
 
 function bufferFromB64(value: string): ArrayBuffer {
-  return Uint8Array.from(atob(value), c => c.charCodeAt(0)).buffer
+  return Uint8Array.from(atob(value), c => c.charCodeAt(0)).buffer as ArrayBuffer
 }
 
 export function Vault() {
@@ -38,19 +39,19 @@ export function Vault() {
   const [revealed, setRevealed] = useState<Record<number, { name: string; user: string; secret: string }>>({})
   const [error, setError] = useState('')
 
-  // Try gateway vault first, fall back to localStorage
   const loadEntries = useCallback(async () => {
-    if (gwStatus === 'connected') {
-      try {
-        const result = await gateway.rpc('vault.list')
-        if (Array.isArray(result)) {
-          setEntries(result)
-          return
-        }
-      } catch { /* fall through to localStorage */ }
+    setError('')
+    if (gwStatus !== 'connected') {
+      setEntries([])
+      return
     }
-    const stored = localStorage.getItem('ocmc-vault')
-    if (stored) setEntries(JSON.parse(stored))
+    try {
+      const result = await gateway.rpc('vault.list')
+      setEntries(Array.isArray(result) ? result : [])
+    } catch {
+      setEntries([])
+      setError('Gateway vault unavailable')
+    }
   }, [gwStatus])
 
   useEffect(() => { loadEntries() }, [loadEntries])
@@ -58,6 +59,11 @@ export function Vault() {
   const storeEntry = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    if (gwStatus !== 'connected') {
+      setError('Connect to the OpenClaw Gateway before storing a secret')
+      return
+    }
 
     const entry = { name: form.name, user: form.user, secret: form.secret }
     const salt = crypto.getRandomValues(new Uint8Array(16))
@@ -75,14 +81,8 @@ export function Vault() {
         blob: b64FromBuffer(encrypted),
       }
 
-      const updated = [...entries, newEntry]
-      setEntries(updated)
-      localStorage.setItem('ocmc-vault', JSON.stringify(updated))
-
-      // Also persist to gateway if connected
-      if (gwStatus === 'connected') {
-        try { await gateway.rpc('vault.store', newEntry) } catch { /* local only */ }
-      }
+      await gateway.rpc('vault.store', { ...newEntry })
+      await loadEntries()
 
       setForm({ name: '', user: '', secret: '', passphrase: '' })
     } catch {
@@ -114,18 +114,22 @@ export function Vault() {
     }
   }
 
-  const deleteEntry = (index: number) => {
-    const updated = entries.filter((_, i) => i !== index)
-    setEntries(updated)
-    localStorage.setItem('ocmc-vault', JSON.stringify(updated))
-    setRevealed(prev => { const next = { ...prev }; delete next[index]; return next })
+  const deleteEntry = async (index: number) => {
+    setError('')
+    try {
+      await gateway.rpc('vault.delete', { name: entries[index].name })
+      await loadEntries()
+      setRevealed(prev => { const next = { ...prev }; delete next[index]; return next })
+    } catch {
+      setError('Gateway vault delete failed')
+    }
   }
 
   return (
     <div>
       <PageHeader
         title="Secure Vault"
-        subtitle="AES-GCM encrypted credential storage with PBKDF2 key derivation"
+        subtitle="Encrypted credential storage backed by the OpenClaw Gateway vault"
       />
 
       <div style={{
@@ -145,8 +149,13 @@ export function Vault() {
               onChange={e => setForm({ ...form, secret: e.target.value })} />
             <input required type="password" placeholder="Vault passphrase" value={form.passphrase}
               onChange={e => setForm({ ...form, passphrase: e.target.value })} />
-            <button type="submit">Store Secret</button>
+            <button type="submit" disabled={gwStatus !== 'connected'}>Store Secret</button>
             {error && <div style={{ color: 'var(--bad)', fontSize: '0.8rem' }}>{error}</div>}
+            {gwStatus !== 'connected' && (
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                Local browser fallback is disabled. Connect to the Gateway to use the vault.
+              </div>
+            )}
           </form>
         </Card>
 

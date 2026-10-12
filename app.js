@@ -302,69 +302,24 @@ function bufferFromB64(value) {
 
 async function storeVaultEntry(e) {
   e.preventDefault();
-  const entry = {
-    name: $("vault-name").value,
-    user: $("vault-user").value,
-    secret: $("vault-secret").value
-  };
-  const passphrase = $("vault-passphrase").value;
-
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await deriveKey(passphrase, salt);
-
-  const payload = new TextEncoder().encode(JSON.stringify(entry));
-  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, payload);
-
-  const records = JSON.parse(localStorage.getItem("ocmc-vault") ?? "[]");
-  records.push({ salt: b64FromBuffer(salt), iv: b64FromBuffer(iv), blob: b64FromBuffer(encrypted), name: entry.name });
-  localStorage.setItem("ocmc-vault", JSON.stringify(records));
-
-  e.target.reset();
-  addAudit(`Vault entry stored: ${entry.name}`);
-  renderVault();
+  alert("Local browser vault storage is disabled. Use the desktop app with a connected OpenClaw Gateway vault.");
+  addAudit("Blocked insecure local vault write");
 }
 
 async function revealVault(index) {
-  const passphrase = prompt("Passphrase for vault decryption:");
-  if (!passphrase) return;
-
-  try {
-    const records = JSON.parse(localStorage.getItem("ocmc-vault") ?? "[]");
-    const selected = records[index];
-    const key = await deriveKey(passphrase, new Uint8Array(bufferFromB64(selected.salt)));
-    const decrypted = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: new Uint8Array(bufferFromB64(selected.iv)) },
-      key,
-      bufferFromB64(selected.blob)
-    );
-
-    const data = JSON.parse(new TextDecoder().decode(decrypted));
-    alert(`Name: ${data.name}\nUser: ${data.user || "(none)"}\nSecret: ${data.secret}`);
-    addAudit(`Vault entry viewed: ${data.name}`);
-  } catch {
-    alert("Unable to decrypt entry. Check passphrase.");
-    addAudit("Vault decrypt failed");
-  }
+  void index;
+  alert("Local browser vault access is disabled. Use the desktop app with a connected OpenClaw Gateway vault.");
+  addAudit("Blocked insecure local vault read");
 }
 
 function renderVault() {
   const host = $("vault-entries");
   host.innerHTML = "";
 
-  const records = JSON.parse(localStorage.getItem("ocmc-vault") ?? "[]");
-  records.forEach((record, index) => {
-    const row = document.createElement("div");
-    row.className = "item row";
-    row.innerHTML = `<strong>${record.name}</strong>`;
-
-    const button = document.createElement("button");
-    button.textContent = "Reveal";
-    button.onclick = () => revealVault(index);
-    row.appendChild(button);
-
-    host.appendChild(row);
-  });
+  const notice = document.createElement("div");
+  notice.className = "item";
+  notice.textContent = "Local browser vault disabled. Connect through the desktop app and OpenClaw Gateway.";
+  host.appendChild(notice);
 }
 
 function renderAudit() {

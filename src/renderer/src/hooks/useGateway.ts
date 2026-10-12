@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { gateway, ConnectionStatus } from '../services/gateway'
+import { gateway, ConnectionStatus, GatewayEvent } from '../services/gateway'
 
 export function useGatewayStatus() {
   const [status, setStatus] = useState<ConnectionStatus>(gateway.getStatus())
